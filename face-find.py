@@ -37,14 +37,17 @@ for i, face_rect in enumerate(detected_faces):
     crop = image[face_rect.top():face_rect.bottom(), face_rect.left():face_rect.right()]
 
     encodings = face_recognition.face_encodings(crop)
+    threshold = 0.6
     if len(encodings) > 0:
-        query = "SELECT file FROM vectors ORDER BY " + \
-                "(CUBE(array[{}]) <-> vec_low) + (CUBE(array[{}]) <-> vec_high) ASC LIMIT 1".format(
-            ','.join(str(s) for s in encodings[0][0:63]),
-            ','.join(str(s) for s in encodings[0][64:127]),
-        )
+        query = "SELECT file FROM vectors WHERE sqrt(power(CUBE(array[{}]) <-> vec_low, 2) + power(CUBE(array[{}]) <-> vec_high, 2)) <= {} ".format(
+            ','.join(str(s) for s in encodings[0][0:64]),
+            ','.join(str(s) for s in encodings[0][64:128]),
+            threshold,
+        ) + \
+                "ORDER BY sqrt(power(CUBE(array[{}]) <-> vec_low, 2) + power(CUBE(array[{}]) <-> vec_high, 2)) <-> vec_high) ASC LIMIT 1".format(
+                    ','.join(str(s) for s in encodings[0][0:64]),
+                    ','.join(str(s) for s in encodings[0][64:128]),
+                )
         print(db.query(query))
     else:
         print("No encodings")
-
-
